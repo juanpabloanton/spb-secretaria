@@ -9,6 +9,7 @@ import com.cienciayfe.secretaria.adaptadores.entrada.rest.generated.model.CargaR
 import com.cienciayfe.secretaria.adaptadores.entrada.rest.generated.model.FuenteCentralResponse;
 import com.cienciayfe.secretaria.aplicacion.puerto.entrada.CargarInformacionAcademicaUseCase;
 import com.cienciayfe.secretaria.aplicacion.puerto.entrada.ConsultarInformacionAcademicaUseCase;
+import com.cienciayfe.secretaria.dominio.excepcion.ArchivoInvalidoException;
 import com.cienciayfe.secretaria.dominio.modelo.InformacionAcademica;
 import com.cienciayfe.secretaria.dominio.modelo.InformacionAcademica.EstadoInformacion;
 import java.io.IOException;
@@ -54,11 +55,12 @@ class InformacionAcademicaControllerTest {
     @Test
     void cargarPropagaErrorDeLectura() throws IOException {
         MultipartFile archivo = mock(MultipartFile.class);
+        when(archivo.getContentType()).thenReturn("text/plain");
         when(archivo.getBytes()).thenThrow(new IOException("lectura"));
 
         assertThatThrownBy(() -> controller.cargarInformacionAcademica("2025-II", "usuario", archivo))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Error leyendo");
+                .isInstanceOf(ArchivoInvalidoException.class)
+                .extracting("codigo").isEqualTo("ERROR_LECTURA");
     }
 
     @Test

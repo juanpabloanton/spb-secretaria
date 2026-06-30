@@ -8,7 +8,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -28,7 +27,6 @@ public class InformacionAcademicaEntity {
     @Column(name = "periodo_academico_id", nullable = false, unique = true)
     private UUID periodoAcademicoId;
 
-    @Lob
     @Column(nullable = false)
     private byte[] contenido;
 

@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import org.springframework.dao.DataAccessResourceFailureException;
+
 import com.cienciayfe.secretaria.aplicacion.puerto.salida.InformacionAcademicaRepositorio;
 import com.cienciayfe.secretaria.aplicacion.puerto.salida.PeriodoAcademicoRepositorio;
 import com.cienciayfe.secretaria.aplicacion.servicio.CargarInformacionAcademicaService;
@@ -140,5 +142,19 @@ class CargarInformacionAcademicaServiceTest {
                 .isInstanceOf(PeriodoNoHabilitadoException.class)
                 .satisfies(error -> assertThat(((PeriodoNoHabilitadoException) error).getCodigoPeriodo())
                         .isEqualTo("9999-X"));
+    }
+
+    @Test
+    @DisplayName("Dado fallo de conexión durante el guardado, Cuando se carga, Entonces la excepción se propaga")
+    void dadoFalloConexionDuranteGuardadoCuandoSeCargaEntoncesExcepcionPropaga() {
+        byte[] contenido = CSV_VALIDO.getBytes(StandardCharsets.UTF_8);
+
+        when(periodoRepositorio.findByCodigo("2025-II")).thenReturn(Optional.of(periodoHabilitado));
+        when(informacionRepositorio.save(any()))
+                .thenThrow(new DataAccessResourceFailureException("Conexión perdida con la base de datos"));
+
+        assertThatThrownBy(() -> service.cargar("2025-II", contenido, "datos.csv", "secretaria01"))
+                .isInstanceOf(DataAccessResourceFailureException.class)
+                .hasMessageContaining("Conexión perdida");
     }
 }

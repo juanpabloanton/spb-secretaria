@@ -5,6 +5,7 @@ import com.cienciayfe.secretaria.adaptadores.entrada.rest.generated.model.CargaR
 import com.cienciayfe.secretaria.adaptadores.entrada.rest.generated.model.FuenteCentralResponse;
 import com.cienciayfe.secretaria.aplicacion.puerto.entrada.CargarInformacionAcademicaUseCase;
 import com.cienciayfe.secretaria.aplicacion.puerto.entrada.ConsultarInformacionAcademicaUseCase;
+import com.cienciayfe.secretaria.dominio.excepcion.ArchivoInvalidoException;
 import com.cienciayfe.secretaria.dominio.modelo.InformacionAcademica;
 import com.cienciayfe.secretaria.dominio.modelo.InformacionAcademica.EstadoInformacion;
 import java.io.IOException;
@@ -27,11 +28,24 @@ public class InformacionAcademicaController implements InformacionAcademicaApi {
             String codigoPeriodo,
             String xUsuarioResponsable,
             MultipartFile archivo) {
+
+        if (xUsuarioResponsable == null || xUsuarioResponsable.isBlank()) {
+            throw new ArchivoInvalidoException("HEADER_REQUERIDO",
+                    "El header 'X-Usuario-Responsable' es obligatorio");
+        }
+
+        String contentType = archivo.getContentType();
+        if (contentType == null
+                || (!contentType.startsWith("text/csv") && !contentType.startsWith("text/plain"))) {
+            throw new ArchivoInvalidoException("TIPO_INVALIDO",
+                    "El archivo debe ser un CSV (text/csv o text/plain)");
+        }
+
         byte[] contenido;
         try {
             contenido = archivo.getBytes();
         } catch (IOException e) {
-            throw new RuntimeException("Error leyendo el archivo", e);
+            throw new ArchivoInvalidoException("ERROR_LECTURA", "No se pudo leer el archivo cargado");
         }
 
         InformacionAcademica resultado = cargarUseCase.cargar(
