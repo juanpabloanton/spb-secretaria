@@ -1,0 +1,6 @@
+generatorName: spring
+interfaceOnly: "true"
+useSpringBoot3: "true"
+useTags: "true"
+openApiNullable: "false"
+skipDefaultInterface: "true"

@@ -45,13 +45,21 @@ description: "Task list template for feature implementation"
   ============================================================================
 -->
 
-## Phase 1: Setup (Shared Infrastructure)
+## Fase 1: Configuración (Infraestructura Compartida)
 
-**Purpose**: Project initialization and basic structure
+**Propósito**: Inicialización del proyecto, estructura base y herramientas de cumplimiento con la constitución
 
-- [ ] T001 Create project structure per implementation plan
-- [ ] T002 Initialize [language] project with [framework] dependencies
-- [ ] T003 [P] Configure linting and formatting tools
+- [ ] T001 Crear estructura de paquetes de Arquitectura Limpia según el plan de implementación
+  (`dominio`, `aplicacion`, `adaptadores`, `infraestructura`)
+- [ ] T002 Inicializar proyecto Spring Boot con las dependencias requeridas
+  (Spring Web, Spring Data JPA, openapi-generator-maven-plugin, plugin de JaCoCo)
+- [ ] T003 [P] Configurar herramientas de análisis estático (Checkstyle, SpotBugs)
+- [ ] T004 [P] Configurar plugin JaCoCo en `pom.xml` con umbrales: por clase > 80% y global ≥ 80%;
+  excluir fuentes generadas del análisis
+- [ ] T005 Definir contrato OpenAPI en `src/main/resources/openapi/[dominio]-api-v1.yaml`
+  (API First — DEBE realizarse antes de cualquier tarea de implementación)
+- [ ] T006 Configurar `openapi-generator-maven-plugin` en `pom.xml` vinculado a la fase
+  `generate-sources`; verificar que la generación de stubs se ejecute limpiamente
 
 ---
 
@@ -80,12 +88,17 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 1 (OPTIONAL - only if tests requested) ⚠️
+### Pruebas para Historia de Usuario 1 (OBLIGATORIAS — Principio II de la constitución) ⚠️
 
-> **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
+> **NOTA (BDD + TDD): Escribir TODAS las pruebas PRIMERO. DEBEN FALLAR antes de comenzar la implementación.**
+> Cada clase de prueba DEBE tener un `@DisplayName` que exprese la frase Dado/Cuando/Entonces completa.
 
-- [ ] T010 [P] [US1] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T011 [P] [US1] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T010 [P] [HU1] Prueba unitaria (BDD) para [CasoDeUso] en
+  `src/test/java/.../aplicacion/[CasoDeUso]Test.java` — simular todos los colaboradores
+- [ ] T011 [P] [HU1] Prueba de integración (BDD) para [endpoint] en
+  `src/test/java/.../adaptadores/[ControladorIT].java` — usar `@WebMvcTest` o `@SpringBootTest`
+- [ ] T012 [P] [HU1] Prueba funcional (BDD) para [recorrido de usuario] en
+  `src/test/java/.../funcional/[FuncionalidadTest].java` — dirigida por contrato OpenAPI vía RestAssured
 
 ### Implementation for User Story 1
 

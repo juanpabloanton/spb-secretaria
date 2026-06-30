@@ -1,0 +1,138 @@
+{
+  "proyecto": "spb-secretaria",
+  "version": "0.0.1-SNAPSHOT",
+  "fecha": "2026-06-28",
+  "commit": "0a62e74",
+  "tests": {
+    "comando": "./gradlew test jacocoTestReport",
+    "passed": 23,
+    "skipped": 10,
+    "failed": 0,
+    "total": 33,
+    "coverage": 93.7,
+    "coverage_fuente": "build/reports/jacoco/test/html/index.html (XML no generado; build.gradle configura solo reports.html.required = true)",
+    "coverage_instrucciones_pct": 92.0,
+    "coverage_ramas_pct": 75.0,
+    "nota": "10 pruebas SALTADAS: 6 de integración (InformacionAcademicaControllerIT, 6/6 skipped) + 4 funcionales (CentralizarInformacionAcademicaFuncionalTest, 4/4 skipped). La constitución exige 100% aprobadas en las tres suites. La condición 'todas pasan' NO se cumple: 23 passed de 33 totales."
+  },
+  "security": {
+    "fuente": "Análisis manual: grep de secretos en src/main + lectura de fuentes + búsqueda de configuración Spring Security. AVISO: Semgrep MCP no disponible en esta sesión (semgrep_scan/security_check no registrados); el escaneo automático no se ejecutó.",
+    "semgrep_ejecutado": false,
+    "critical": 1,
+    "high": 3,
+    "secrets": 1,
+    "hallazgos": [
+      {
+        "severidad": "critical",
+        "regla": "spring-security-ausente",
+        "archivo": "build.gradle",
+        "linea": "bloque dependencies",
+        "nota": "spring-boot-starter-security no está en el classpath. Todos los endpoints REST son públicos y accesibles sin autenticación. Grep exhaustivo de @PreAuthorize, @Secured, @RolesAllowed, SecurityFilterChain, HttpSecurity, permitAll en src/: cero resultados."
+      },
+      {
+        "severidad": "secret",
+        "regla": "hardcoded-database-password",
+        "archivo": "src/main/resources/application.yaml",
+        "linea": 7,
+        "nota": "password: secretaria en texto plano commiteado al repositorio. Sin referencia a variables de entorno ni gestor de secretos."
+      },
+      {
+        "severidad": "high",
+        "regla": "unauthenticated-identity-header",
+        "archivo": "src/main/java/com/cienciayfe/secretaria/adaptadores/entrada/rest/InformacionAcademicaController.java",
+        "linea": 38,
+        "nota": "El campo usuarioResponsable se toma del header HTTP X-Usuario-Responsable enviado por el cliente sin ninguna verificación. Sin autenticación real, cualquier actor puede suplantar a la secretaria en el registro de auditoría."
+      },
+      {
+        "severidad": "high",
+        "regla": "unhandled-runtime-exception-stacktrace",
+        "archivo": "src/main/java/com/cienciayfe/secretaria/adaptadores/entrada/rest/InformacionAcademicaController.java",
+        "linea": 34,
+        "nota": "RuntimeException genérico lanzado en el catch de IOException no está capturado por GlobalExceptionHandler. Puede exponer stack trace al cliente; server.error.include-stacktrace no está deshabilitado explícitamente en application.yaml."
+      },
+      {
+        "severidad": "high",
+        "regla": "missing-mime-type-validation",
+        "archivo": "src/main/java/com/cienciayfe/secretaria/adaptadores/entrada/rest/InformacionAcademicaController.java",
+        "linea": 26,
+        "nota": "El endpoint POST acepta cualquier tipo de archivo multipart sin validar Content-Type. Contenido binario arbitrario puede ser almacenado en la columna @Lob de la base de datos."
+      },
+      {
+        "severidad": "medium",
+        "regla": "credentials-in-config-file",
+        "archivo": "src/main/resources/application.yaml",
+        "linea": 5,
+        "nota": "URL de BD, usuario y contraseña en texto plano en archivo de configuración commiteado. Sin referencia a ${DB_URL}, ${DB_USER}, ${DB_PASSWORD} ni a ningún gestor de secretos."
+      }
+    ]
+  },
+  "spec": "specs/001-centralizar-info-academica/spec.md",
+  "criteria": [
+    {
+      "id": "RF-001",
+      "fuente": "spec.md · RF-001 (selección de período académico habilitado)",
+      "status": "cumple",
+      "evidencia": "CargarInformacionAcademicaServiceTest.dadoPeriodoCerradoCuandoSeCargaEntoncesLanzaExcepcion PASA (período CERRADO rechazado); dadoPeriodoInexistenteEntoncesLanzaExcepcion PASA (período inexistente lanza PeriodoNoHabilitadoException)"
+    },
+    {
+      "id": "RF-002",
+      "fuente": "spec.md · RF-002 (cargar archivo de datos académicos)",
+      "status": "cumple",
+      "evidencia": "CargarInformacionAcademicaServiceTest.dadoCsvValidoCuandoSeCargaEntoncesSeRegistra PASA; InformacionAcademicaControllerTest.cargarRetornaCreadoConMetadatos PASA (HTTP 201)"
+    },
+    {
+      "id": "RF-003",
+      "fuente": "spec.md · RF-003 (registrar archivo como fuente central oficial)",
+      "status": "cumple",
+      "evidencia": "CargarInformacionAcademicaServiceTest.dadoCsvValidoCuandoSeCargaEntoncesSeRegistra PASA — verifica estado=DISPONIBLE, nombreArchivo='datos.csv', usuarioResponsable='secretaria01'"
+    },
+    {
+      "id": "RF-004",
+      "fuente": "spec.md · RF-004 (reemplazar fuente central existente conservando metadatos)",
+      "status": "cumple",
+      "evidencia": "CargarInformacionAcademicaServiceTest.dadoPeriodoConCargaPreviaCuandoSeCargaNuevoEntoncesReemplaza PASA — verifica nuevo nombreArchivo='nuevo.csv' y usuarioResponsable='secretaria02'"
+    },
+    {
+      "id": "RF-005",
+      "fuente": "spec.md · RF-005 (validar formato e integridad del archivo)",
+      "status": "cumple",
+      "evidencia": "CargarInformacionAcademicaServiceTest: dadoCsvEncabezadosInvalidosCuandoSeCargaEntoncesLanzaExcepcion PASA, dadoArchivoVacioCuandoSeCargaEntoncesLanzaExcepcionVacio PASA, dadoCsvSinFilasEntoncesLanzaExcepcionVacio PASA"
+    },
+    {
+      "id": "RF-006",
+      "fuente": "spec.md · RF-006 (rechazar archivos inválidos informando motivo específico)",
+      "status": "cumple",
+      "evidencia": "dadoCsvEncabezadosInvalidosCuandoSeCargaEntoncesLanzaExcepcion verifica mensaje contiene 'encabezados'; dadoArchivoVacioCuandoSeCargaEntoncesLanzaExcepcionVacio verifica codigo='ARCHIVO_VACIO'; GlobalExceptionHandlerTest.manejaArchivoInvalido PASA"
+    },
+    {
+      "id": "RF-007",
+      "fuente": "spec.md · RF-007 (consultar fuente central vigente de cualquier período habilitado)",
+      "status": "cumple",
+      "evidencia": "ConsultarInformacionAcademicaServiceTest.dadoPeriodoConInformacionCuandoSeConsultaEntoncesRetornaDisponible PASA; InformacionAcademicaControllerTest.consultarRetornaDisponible y consultarRetornaSinInformacion PASAN"
+    },
+    {
+      "id": "RF-008",
+      "fuente": "spec.md · RF-008 (mostrar estado sin-información/disponible y metadatos de última carga)",
+      "status": "cumple",
+      "evidencia": "ConsultarInformacionAcademicaServiceTest: estado DISPONIBLE con nombreArchivo y usuarioResponsable verificados; estado SIN_INFORMACION con nombreArchivo=null verificado"
+    },
+    {
+      "id": "EDGE-archivo-grande",
+      "fuente": "spec.md · Casos Borde (archivo supera tamaño máximo → rechaza sin guardar datos parciales)",
+      "status": "cumple",
+      "evidencia": "GlobalExceptionHandlerTest.manejaArchivoDemasiadoGrande PASA"
+    },
+    {
+      "id": "EDGE-conexion-perdida",
+      "fuente": "spec.md · Casos Borde (pérdida de conexión durante carga → fuente anterior intacta)",
+      "status": "desconocido",
+      "evidencia": "No se encontró prueba que simule pérdida de conexión durante la carga. Búsqueda en src/test de 'conexion', 'connection', 'network', 'timeout', 'rollback': sin resultados relevantes para este escenario."
+    },
+    {
+      "id": "EDGE-periodo-inexistente",
+      "fuente": "spec.md · Casos Borde (período no existe → sistema impide selección)",
+      "status": "cumple",
+      "evidencia": "CargarInformacionAcademicaServiceTest.dadoPeriodoInexistenteEntoncesLanzaExcepcion PASA; ConsultarInformacionAcademicaServiceTest.dadoPeriodoInexistenteCuandoSeConsultaEntoncesLanzaExcepcion PASA"
+    }
+  ]
+}

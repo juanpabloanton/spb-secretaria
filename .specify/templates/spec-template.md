@@ -8,19 +8,30 @@
 
 **Input**: User description: "$ARGUMENTS"
 
-## User Scenarios & Testing *(mandatory)*
+## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 <!--
-  IMPORTANT: User stories should be PRIORITIZED as user journeys ordered by importance.
-  Each user story/journey must be INDEPENDENTLY TESTABLE - meaning if you implement just ONE of them,
-  you should still have a viable MVP (Minimum Viable Product) that delivers value.
+  ALINEACIÓN CON LA CONSTITUCIÓN (Principio II — Estrategia de Pruebas con BDD):
+  Todos los escenarios de aceptación DEBEN expresarse en notación BDD estilo Gherkin:
+    Dado  [precondición / estado inicial]
+    Cuando [acción o evento]
+    Entonces [resultado esperado]
 
-  Assign priorities (P1, P2, P3, etc.) to each story, where P1 is the most critical.
-  Think of each story as a standalone slice of functionality that can be:
-  - Developed independently
-  - Tested independently
-  - Deployed independently
-  - Demonstrated to users independently
+  Cada escenario se mapea a TRES tipos de prueba (todos obligatorios según la constitución):
+    - Prueba Unitaria    → prueba el Caso de Uso en aislamiento (colaboradores simulados)
+    - Prueba Integración → prueba Controlador → Caso de Uso → Repositorio con contexto Spring real
+    - Prueba Funcional   → prueba el ciclo HTTP completo contra el contrato OpenAPI
+
+  IMPORTANTE: Las historias de usuario deben PRIORIZARSE como recorridos de usuario ordenados por importancia.
+  Cada historia de usuario/recorrido debe ser VERIFICABLE DE FORMA INDEPENDIENTE — es decir, si se implementa
+  solo UNA de ellas, aun así se debe tener un MVP viable (Producto Mínimo Viable) que entregue valor.
+
+  Asignar prioridades (P1, P2, P3, etc.) a cada historia, donde P1 es la más crítica.
+  Cada historia es una porción autónoma de funcionalidad que puede:
+  - Desarrollarse de forma independiente
+  - Probarse de forma independiente (unitaria + integración + funcional)
+  - Desplegarse de forma independiente
+  - Demostrarse a usuarios de forma independiente
 -->
 
 ### User Story 1 - [Brief Title] (Priority: P1)

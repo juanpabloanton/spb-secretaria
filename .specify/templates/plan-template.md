@@ -36,11 +36,23 @@
 
 **Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 
-## Constitution Check
+## Verificación de Constitución
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+*PUERTA: Debe superarse antes de la Fase 0 de investigación. Volver a verificar después del diseño de la Fase 1.*
 
-[Gates determined based on constitution file]
+Verificar el cumplimiento de los cinco principios de la constitución antes de continuar:
+
+- [ ] **I. Arquitectura Limpia**: Límites de capa identificados. Las capas de Dominio/Aplicación
+  no tienen imports de framework. Las interfaces de Repositorio están en la capa de Aplicación.
+- [ ] **II. BDD Testing**: Los escenarios de aceptación en `spec.md` están expresados en Dado/Cuando/Entonces.
+  Las tareas de pruebas Unitarias, de Integración y Funcionales están planificadas para cada historia de usuario.
+- [ ] **III. SOLID · YAGNI · DRY**: Cada clase/caso de uso tiene una única responsabilidad.
+  No hay funcionalidades especulativas planificadas. No hay duplicación de lógica entre módulos.
+- [ ] **IV. API First**: La tarea del contrato OpenAPI aparece ANTES de cualquier tarea de implementación.
+  La tarea de generación de código con `openapi-generator` está presente en la Fase 1/2.
+- [ ] **V. Cobertura JaCoCo**: La tarea de configuración del plugin JaCoCo está presente.
+  El umbral por clase > 80% y el umbral global ≥ 80% están configurados en `pom.xml`.
+  Las fuentes generadas están excluidas del análisis.
 
 ## Project Structure
 
