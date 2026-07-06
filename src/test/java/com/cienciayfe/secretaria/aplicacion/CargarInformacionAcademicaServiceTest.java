@@ -72,10 +72,17 @@ class CargarInformacionAcademicaServiceTest {
     @Test
     @DisplayName("Dado período con carga previa, Cuando se carga nuevo CSV, Entonces reemplaza la fuente anterior")
     void dadoPeriodoConCargaPreviaCuandoSeCargaNuevoEntoncesReemplaza() {
+        byte[] contenidoAnterior = CSV_VALIDO.getBytes(StandardCharsets.UTF_8);
+        LocalDateTime fechaCargaAnterior = LocalDateTime.now().minusDays(1);
+        InformacionAcademica anterior = new InformacionAcademica(UUID.randomUUID(),
+                periodoHabilitado.id(), contenidoAnterior, "anterior.csv", contenidoAnterior.length,
+                EstadoInformacion.DISPONIBLE, fechaCargaAnterior, "secretaria01");
+
         byte[] contenido = CSV_VALIDO.getBytes(StandardCharsets.UTF_8);
+        LocalDateTime fechaCargaNueva = LocalDateTime.now();
         InformacionAcademica actualizada = new InformacionAcademica(UUID.randomUUID(),
                 periodoHabilitado.id(), contenido, "nuevo.csv", contenido.length,
-                EstadoInformacion.DISPONIBLE, LocalDateTime.now(), "secretaria02");
+                EstadoInformacion.DISPONIBLE, fechaCargaNueva, "secretaria02");
 
         when(periodoRepositorio.findByCodigo("2025-II")).thenReturn(Optional.of(periodoHabilitado));
         when(informacionRepositorio.save(any())).thenReturn(actualizada);
@@ -84,6 +91,10 @@ class CargarInformacionAcademicaServiceTest {
 
         assertThat(resultado.nombreArchivo()).isEqualTo("nuevo.csv");
         assertThat(resultado.usuarioResponsable()).isEqualTo("secretaria02");
+        assertThat(resultado.fechaCarga())
+                .as("la fechaCarga debe actualizarse y no conservar la del registro reemplazado")
+                .isNotEqualTo(anterior.fechaCarga())
+                .isEqualTo(fechaCargaNueva);
     }
 
     @Test
@@ -142,6 +153,104 @@ class CargarInformacionAcademicaServiceTest {
                 .isInstanceOf(PeriodoNoHabilitadoException.class)
                 .satisfies(error -> assertThat(((PeriodoNoHabilitadoException) error).getCodigoPeriodo())
                         .isEqualTo("9999-X"));
+    }
+
+    @Test
+    @DisplayName("Dado fila con número de columnas incorrecto, Cuando se carga, Entonces lanza FORMATO_INVALIDO")
+    void dadoFilaConNumeroColumnasIncorrectoCuandoSeCargaEntoncesLanzaExcepcionFormatoInvalido() {
+        byte[] contenido = ("""
+                codigo_estudiante;apellido_paterno;apellido_materno;nombres;calificacion_final;condicion
+                EST001;García;López;Ana María;18.5
+                """).getBytes(StandardCharsets.UTF_8);
+        when(periodoRepositorio.findByCodigo("2025-II")).thenReturn(Optional.of(periodoHabilitado));
+
+        assertThatThrownBy(() -> service.cargar("2025-II", contenido, "malo.csv", "secretaria01"))
+                .isInstanceOf(ArchivoInvalidoException.class)
+                .extracting("codigo").isEqualTo("FORMATO_INVALIDO");
+    }
+
+    @Test
+    @DisplayName("Dado fila con apellido_paterno vacío, Cuando se carga, Entonces lanza CAMPO_REQUERIDO")
+    void dadoFilaConApellidoPaternoVacioCuandoSeCargaEntoncesLanzaExcepcionCampoRequerido() {
+        byte[] contenido = ("""
+                codigo_estudiante;apellido_paterno;apellido_materno;nombres;calificacion_final;condicion
+                EST001;;López;Ana María;18.5;PROMOVIDO
+                """).getBytes(StandardCharsets.UTF_8);
+        when(periodoRepositorio.findByCodigo("2025-II")).thenReturn(Optional.of(periodoHabilitado));
+
+        assertThatThrownBy(() -> service.cargar("2025-II", contenido, "malo.csv", "secretaria01"))
+                .isInstanceOf(ArchivoInvalidoException.class)
+                .extracting("codigo").isEqualTo("CAMPO_REQUERIDO");
+    }
+
+    @Test
+    @DisplayName("Dado fila con nombres vacío, Cuando se carga, Entonces lanza CAMPO_REQUERIDO")
+    void dadoFilaConNombresVacioCuandoSeCargaEntoncesLanzaExcepcionCampoRequerido() {
+        byte[] contenido = ("""
+                codigo_estudiante;apellido_paterno;apellido_materno;nombres;calificacion_final;condicion
+                EST001;García;López;;18.5;PROMOVIDO
+                """).getBytes(StandardCharsets.UTF_8);
+        when(periodoRepositorio.findByCodigo("2025-II")).thenReturn(Optional.of(periodoHabilitado));
+
+        assertThatThrownBy(() -> service.cargar("2025-II", contenido, "malo.csv", "secretaria01"))
+                .isInstanceOf(ArchivoInvalidoException.class)
+                .extracting("codigo").isEqualTo("CAMPO_REQUERIDO");
+    }
+
+    @Test
+    @DisplayName("Dado codigo_estudiante vacío, Cuando se carga, Entonces lanza CAMPO_REQUERIDO")
+    void dadoFilaConCodigoEstudianteVacioCuandoSeCargaEntoncesLanzaExcepcionCampoRequerido() {
+        byte[] contenido = ("""
+                codigo_estudiante;apellido_paterno;apellido_materno;nombres;calificacion_final;condicion
+                ;García;López;Ana María;18.5;PROMOVIDO
+                """).getBytes(StandardCharsets.UTF_8);
+        when(periodoRepositorio.findByCodigo("2025-II")).thenReturn(Optional.of(periodoHabilitado));
+
+        assertThatThrownBy(() -> service.cargar("2025-II", contenido, "malo.csv", "secretaria01"))
+                .isInstanceOf(ArchivoInvalidoException.class)
+                .extracting("codigo").isEqualTo("CAMPO_REQUERIDO");
+    }
+
+    @Test
+    @DisplayName("Dado calificacion_final no numérica, Cuando se carga, Entonces lanza CALIFICACION_INVALIDA")
+    void dadoCalificacionNoNumericaCuandoSeCargaEntoncesLanzaExcepcionCalificacionInvalida() {
+        byte[] contenido = ("""
+                codigo_estudiante;apellido_paterno;apellido_materno;nombres;calificacion_final;condicion
+                EST001;García;López;Ana María;abc;PROMOVIDO
+                """).getBytes(StandardCharsets.UTF_8);
+        when(periodoRepositorio.findByCodigo("2025-II")).thenReturn(Optional.of(periodoHabilitado));
+
+        assertThatThrownBy(() -> service.cargar("2025-II", contenido, "malo.csv", "secretaria01"))
+                .isInstanceOf(ArchivoInvalidoException.class)
+                .extracting("codigo").isEqualTo("CALIFICACION_INVALIDA");
+    }
+
+    @Test
+    @DisplayName("Dado calificacion_final fuera de rango, Cuando se carga, Entonces lanza CALIFICACION_INVALIDA")
+    void dadoCalificacionFueraDeRangoCuandoSeCargaEntoncesLanzaExcepcionCalificacionInvalida() {
+        byte[] contenido = ("""
+                codigo_estudiante;apellido_paterno;apellido_materno;nombres;calificacion_final;condicion
+                EST001;García;López;Ana María;20.5;PROMOVIDO
+                """).getBytes(StandardCharsets.UTF_8);
+        when(periodoRepositorio.findByCodigo("2025-II")).thenReturn(Optional.of(periodoHabilitado));
+
+        assertThatThrownBy(() -> service.cargar("2025-II", contenido, "malo.csv", "secretaria01"))
+                .isInstanceOf(ArchivoInvalidoException.class)
+                .extracting("codigo").isEqualTo("CALIFICACION_INVALIDA");
+    }
+
+    @Test
+    @DisplayName("Dado condicion inválida, Cuando se carga, Entonces lanza CONDICION_INVALIDA")
+    void dadoCondicionInvalidaCuandoSeCargaEntoncesLanzaExcepcionCondicionInvalida() {
+        byte[] contenido = ("""
+                codigo_estudiante;apellido_paterno;apellido_materno;nombres;calificacion_final;condicion
+                EST001;García;López;Ana María;18.5;DESAPROBADO
+                """).getBytes(StandardCharsets.UTF_8);
+        when(periodoRepositorio.findByCodigo("2025-II")).thenReturn(Optional.of(periodoHabilitado));
+
+        assertThatThrownBy(() -> service.cargar("2025-II", contenido, "malo.csv", "secretaria01"))
+                .isInstanceOf(ArchivoInvalidoException.class)
+                .extracting("codigo").isEqualTo("CONDICION_INVALIDA");
     }
 
     @Test

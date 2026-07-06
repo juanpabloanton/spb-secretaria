@@ -31,6 +31,7 @@ class CentralizarInformacionAcademicaFuncionalTest {
             EST003;Mendoza;Silva;Lucía;8.5;REPROBADO
             EST004;Flores;Castro;Diego;20.0;ABANDERADO
             """.getBytes();
+    private static final int TAMANIO_ARCHIVO_DEMASIADO_GRANDE_BYTES = 11 * 1024 * 1024;
 
     @LocalServerPort
     int port;
@@ -141,6 +142,28 @@ class CentralizarInformacionAcademicaFuncionalTest {
         requestConAuth()
         .when()
             .get(ENDPOINT, "2025-I")
+        .then()
+            .statusCode(HttpStatus.OK.value())
+            .body("estado", equalTo("SIN_INFORMACION"));
+    }
+
+    // ── Caso borde: tamaño máximo excedido ──────────────────────────────────
+    @Test
+    @DisplayName("Dado archivo que excede el tamaño máximo permitido, Cuando POST, Entonces 413 sin guardar datos")
+    void dadoArchivoDemasiadoGrandeCuandoPostEntonces413() {
+        byte[] archivoGrande = new byte[TAMANIO_ARCHIVO_DEMASIADO_GRANDE_BYTES];
+
+        requestConAuth().header(HEADER, "secretaria01")
+            .multiPart("archivo", "grande.csv", archivoGrande, "text/plain")
+        .when()
+            .post(ENDPOINT, "2025-II")
+        .then()
+            .statusCode(HttpStatus.PAYLOAD_TOO_LARGE.value())
+            .body("codigo", equalTo("ARCHIVO_DEMASIADO_GRANDE"));
+
+        requestConAuth()
+        .when()
+            .get(ENDPOINT, "2025-II")
         .then()
             .statusCode(HttpStatus.OK.value())
             .body("estado", equalTo("SIN_INFORMACION"));

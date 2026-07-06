@@ -10,6 +10,7 @@ import com.cienciayfe.secretaria.dominio.modelo.InformacionAcademica;
 import com.cienciayfe.secretaria.dominio.modelo.InformacionAcademica.EstadoInformacion;
 import java.io.IOException;
 import java.time.ZoneOffset;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,10 +36,14 @@ public class InformacionAcademicaController implements InformacionAcademicaApi {
         }
 
         String contentType = archivo.getContentType();
-        if (contentType == null
-                || (!contentType.startsWith("text/csv") && !contentType.startsWith("text/plain"))) {
+        String nombreOriginal = archivo.getOriginalFilename();
+        boolean contentTypeValido = contentType != null
+                && (contentType.startsWith("text/csv") || contentType.startsWith("text/plain"));
+        boolean extensionValida = nombreOriginal != null
+                && nombreOriginal.toLowerCase(Locale.ROOT).endsWith(".csv");
+        if (!contentTypeValido || !extensionValida) {
             throw new ArchivoInvalidoException("TIPO_INVALIDO",
-                    "El archivo debe ser un CSV (text/csv o text/plain)");
+                    "El archivo debe ser un CSV (text/csv o text/plain) con extensión .csv");
         }
 
         byte[] contenido;

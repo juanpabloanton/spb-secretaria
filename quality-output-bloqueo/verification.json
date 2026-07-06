@@ -1,0 +1,127 @@
+{
+  "proyecto": "spb-secretaria",
+  "version": "0.0.1-SNAPSHOT",
+  "fecha": "2026-07-05",
+  "commit": "6bdf523",
+  "tests": {
+    "comando": "./gradlew.bat clean test jacocoTestReport jacocoTestCoverageVerification checkstyleMain checkstyleTest spotbugsMain",
+    "passed": 34,
+    "total": 34,
+    "coverage": 93.2,
+    "coverage_lineas": 93.2,
+    "coverage_instrucciones": 91.5,
+    "coverage_ramas": 70.0,
+    "coverage_fuente": "build/reports/jacoco/test/html/index.html — el build.gradle solo configura html.required=true en jacocoTestReport (no genera XML); se leyó el HTML directamente. Total proyecto: instrucciones 788/861=91.5%, líneas 151/162=93.2%, ramas 35/50=70.0%.",
+    "coverage_riesgo": "CargarInformacionAcademicaService.html: cobertura de instrucciones 80.19% (247/308, justo sobre el umbral >80% de la constitución) y cobertura de ramas 68% (22/32) — la clase con más lógica de negocio/validación está en el límite y con más de un tercio de sus ramas sin ejercitar. La constitución exige cobertura de clase >80% de línea+rama; el jacocoTestCoverageVerification configurado en build.gradle solo aplica la regla INSTRUCTION a nivel de clase y LINE a nivel de bundle (no rama), por lo que el build pasa pese a la rama baja.",
+    "jacocoTestCoverageVerification": "BUILD SUCCESSFUL (reglas configuradas: CLASS/INSTRUCTION >=80%, BUNDLE/LINE >=80%; ambas se cumplieron con los umbrales tal como están configurados en build.gradle, que no son literalmente los de la constitución)",
+    "checkstyle_violations_main": 0,
+    "checkstyle_violations_test": 0,
+    "spotbugs": "BUILD SUCCESSFUL, spotbugsMain sin fallar con ignoreFailures=false — 0 hallazgos por encima del umbral por defecto"
+  },
+  "security": {
+    "fuente": "Semgrep MCP (mcp__semgrep__semgrep_scan) ejecutado sobre los 20 archivos .java de src/main/java (registry rules por defecto, v1.168.0) + revisión manual de src/main/java y grep de secretos.",
+    "sast_semgrep": "EJECUTADO: 0 resultados, 0 errores, 20/20 archivos escaneados (paths.scanned confirma cobertura completa de src/main/java). Sin hallazgos de las reglas registry por defecto de Semgrep. Los hallazgos 'high'/'medium' listados abajo son de revisión manual (patrones específicos del dominio que las reglas genéricas de Semgrep no cubren: spoofing de header de auditoría, CSRF+httpBasic, validación de content-type), no del escaneo automatizado.",
+    "critical": 0,
+    "high": 1,
+    "secrets": 0,
+    "hallazgos": [
+      {
+        "severidad": "high",
+        "regla": "manual-review: audit-trail-spoofable-via-client-header",
+        "archivo": "src/main/java/com/cienciayfe/secretaria/adaptadores/entrada/rest/InformacionAcademicaController.java",
+        "linea": "27-35, 51-52",
+        "descripcion": "El campo usuarioResponsable que queda registrado como autor de la carga (metadato exigido por RF-004) se toma tal cual del header X-Usuario-Responsable enviado por el cliente, sin contrastarlo contra el principal autenticado por Spring Security (SecurityContextHolder no se usa en ningún punto). Cualquier usuario con credenciales válidas de 'secretaria' puede falsificar el nombre del responsable en el registro de auditoría."
+      },
+      {
+        "severidad": "medium",
+        "regla": "manual-review: csrf-disabled-with-stateful-httpbasic",
+        "archivo": "src/main/java/com/cienciayfe/secretaria/infraestructura/configuracion/SecurityConfig.java",
+        "linea": "26-33",
+        "descripcion": "csrf(...disable) combinado con httpBasic sin fijar SessionCreationPolicy.STATELESS explícito. Si el contenedor conserva JSESSIONID entre peticiones, el POST de carga (que muta estado) queda expuesto a CSRF. Mitigar fijando sessionManagement().sessionCreationPolicy(STATELESS) o mantener CSRF habilitado."
+      },
+      {
+        "severidad": "medium",
+        "regla": "manual-review: content-type-only-file-validation",
+        "archivo": "src/main/java/com/cienciayfe/secretaria/adaptadores/entrada/rest/InformacionAcademicaController.java",
+        "linea": "37-42",
+        "descripcion": "La validación de tipo de archivo se basa únicamente en MultipartFile.getContentType(), cabecera controlada por el cliente y falsificable; no hay verificación de magic bytes. Mitigante parcial: el contenido igual se parsea estrictamente como CSV UTF-8 de esquema fijo y se guarda como bytes en BD, sin ejecutarse ni escribirse a disco con el nombre original (sin riesgo de path traversal ni RCE)."
+      }
+    ],
+    "hallazgos_positivos": [
+      "SecurityConfig.java:29 — /periodos/** protegido con hasRole(SECRETARIA); .anyRequest().permitAll() en línea 30 no expone ningún endpoint propio de esta feature (el único path de la API, /periodos/{codigoPeriodo}/informacion-academica, cae bajo el matcher protegido).",
+      "application.yaml:7,28 — DB_PASSWORD y APP_SECRETARIA_PASSWORD se inyectan por variable de entorno sin valor por defecto embebido en código; grep de 'password|secret|api[_-]?key|token' sobre src/main no encontró literales en claro.",
+      "SecurityConfig.java:47-49 — BCryptPasswordEncoder para el hash de la contraseña en memoria.",
+      "InformacionAcademicaRepositorioAdapter/JPA repos — solo Spring Data JPA con métodos derivados; no hay @Query nativo ni concatenación de SQL (sin riesgo de inyección SQL detectado en revisión manual).",
+      "application.yaml:34 — server.error.include-stacktrace: never (no se filtran stack traces en respuestas de error)."
+    ]
+  },
+  "spec": "specs/001-centralizar-info-academica/spec.md",
+  "criteria": [
+    {
+      "id": "RF-001",
+      "fuente": "spec.md · RF-001 (seleccionar período académico habilitado antes de cargar)",
+      "status": "cumple",
+      "evidencia": "CargarInformacionAcademicaServiceTest.dadoPeriodoCerradoCuandoSeCargaEntoncesLanzaExcepcion PASA (PeriodoNoHabilitadoException si el período está CERRADO); dadoPeriodoInexistenteEntoncesLanzaExcepcion PASA. InformacionAcademicaControllerIT.dadoPeriodoCerradoCuandoPostEntonces404 y dadoPeriodoInexistenteCuandoPostEntonces404 PASAN (HTTP 404). El sistema impide operar sobre un período no habilitado en las tres capas (servicio, controller, HTTP)."
+    },
+    {
+      "id": "RF-002",
+      "fuente": "spec.md · RF-002 (cargar archivo para el período seleccionado)",
+      "status": "cumple",
+      "evidencia": "CargarInformacionAcademicaServiceTest.dadoCsvValidoCuandoSeCargaEntoncesSeRegistra PASA. InformacionAcademicaControllerIT.dadoCsvValidoCuandoPostEntonces201 PASA (HTTP 201). CentralizarInformacionAcademicaFuncionalTest.dadoCsvValidoCuandoPostEntonces201ConUsuario PASA (extremo a extremo vía RestAssured)."
+    },
+    {
+      "id": "RF-003",
+      "fuente": "spec.md · RF-003 (registrar el archivo como fuente central oficial)",
+      "status": "cumple",
+      "evidencia": "CargarInformacionAcademicaServiceTest.dadoCsvValidoCuandoSeCargaEntoncesSeRegistra verifica resultado.estado()==DISPONIBLE. CentralizarInformacionAcademicaFuncionalTest y InformacionAcademicaControllerIT confirman HTTP 201 con metadatos persistidos."
+    },
+    {
+      "id": "RF-004",
+      "fuente": "spec.md · RF-004 (reemplazar fuente central conservando metadatos: fecha, hora, usuario)",
+      "status": "cumple",
+      "evidencia": "CargarInformacionAcademicaServiceTest.dadoPeriodoConCargaPreviaCuandoSeCargaNuevoEntoncesReemplaza PASA (nombreArchivo pasa a 'nuevo.csv', usuario a 'secretaria02'). RepositorioAdaptersTest.informacionActualizaYConsultaEntidadExistente PASA (confirma que se actualiza la entidad existente en vez de crear otra, UNIQUE por periodo_academico_id). CentralizarInformacionAcademicaFuncionalTest.dadoCargaPreviaCuandoPostNuevoCsvEntonces201Reemplaza PASA end-to-end. NOTA: ningún test compara explícitamente el valor de fechaCarga antes/después del reemplazo (solo se verifica nombreArchivo y usuarioResponsable); el código sí reasigna fechaCarga (InformacionAcademicaRepositorioAdapter.java:36) pero esa parte del metadato no está aserted directamente."
+    },
+    {
+      "id": "RF-005",
+      "fuente": "spec.md · RF-005 (validar formato e integridad del archivo antes de aceptarlo)",
+      "status": "incumple",
+      "evidencia": "Solo 2 de las ~7 reglas de validación implementadas en CargarInformacionAcademicaService.java tienen prueba: encabezados incorrectos (dadoCsvEncabezadosInvalidosCuandoSeCargaEntoncesLanzaExcepcion) y archivo vacío/sin filas (dadoArchivoVacioCuandoSeCargaEntoncesLanzaExcepcionVacio, dadoCsvSinFilasEntoncesLanzaExcepcionVacio). Grep sobre src/test no encontró NINGUNA prueba para: validarCalificacion (líneas 108-119, código CALIFICACION_INVALIDA), validarCondicion (líneas 121-126, código CONDICION_INVALIDA), número de columnas incorrecto en una fila (líneas 91-94, código FORMATO_INVALIDO), campos requeridos vacíos apellido_paterno/nombres (líneas 95-103, código CAMPO_REQUERIDO), ni la validación de tipo de contenido del archivo en el controller (InformacionAcademicaController.java:37-42, código TIPO_INVALIDO). El código de validación existe pero la mayoría de sus ramas están sin verificar — consistente con la cobertura de ramas de esa clase (68%, ver tests.coverage_riesgo)."
+    },
+    {
+      "id": "RF-006",
+      "fuente": "spec.md · RF-006 (rechazar archivos inválidos informando el motivo específico)",
+      "status": "incumple",
+      "evidencia": "Igual que RF-005: solo ENCABEZADOS_INVALIDOS (InformacionAcademicaControllerIT.dadoCsvInvalidoCuandoPostEntonces400 PASA, HTTP 400) y ARCHIVO_VACIO (unit) están probados de punta a punta. Los motivos CALIFICACION_INVALIDA, CONDICION_INVALIDA, FORMATO_INVALIDO, CAMPO_REQUERIDO, TIPO_INVALIDO y HEADER_REQUERIDO están documentados como ejemplos explícitos en el contrato OpenAPI (secretaria-api-v1.yaml líneas 78-92, ejemplo 'calificacionInvalida' y 'headerAusente') pero no tienen ninguna prueba automatizada que confirme que el sistema realmente los rechaza e informa el motivo correcto."
+    },
+    {
+      "id": "RF-007",
+      "fuente": "spec.md · RF-007 (consultar la fuente central vigente de cualquier período habilitado)",
+      "status": "cumple",
+      "evidencia": "ConsultarInformacionAcademicaServiceTest.dadoPeriodoConInformacionCuandoSeConsultaEntoncesRetornaDisponible PASA. InformacionAcademicaControllerIT (GET, 2 tests) y CentralizarInformacionAcademicaFuncionalTest (GET, 2 tests) PASAN con HTTP 200."
+    },
+    {
+      "id": "RF-008",
+      "fuente": "spec.md · RF-008 (mostrar estado y metadatos de la última carga)",
+      "status": "cumple",
+      "evidencia": "ConsultarInformacionAcademicaServiceTest.dadoPeriodoSinInformacionCuandoSeConsultaEntoncesRetornaSinInformacion PASA (estado=SIN_INFORMACION, nombreArchivo=null). InformacionAcademicaControllerIT.dadoPeriodoSinInformacionCuandoGetEntonces200SinInformacion y dadoPeriodoConInformacionCuandoGetEntonces200Disponible verifican estado + metadatos (nombreArchivo, tamanioBytes, fechaCarga, usuarioResponsable)."
+    },
+    {
+      "id": "EDGE-tamanio-maximo",
+      "fuente": "spec.md · Casos Borde (el archivo supera el tamaño máximo permitido)",
+      "status": "incumple",
+      "evidencia": "Solo existe GlobalExceptionHandlerTest.manejaArchivoDemasiadoGrande, que construye a mano un MaxUploadSizeExceededException y prueba únicamente el handler en aislamiento (PASA, HTTP 413). No hay ninguna prueba de integración ni funcional que suba realmente un archivo mayor a application.yaml:22-24 (max-file-size=10MB / max-request-size=10MB) contra el stack real de Spring MVC + multipart para confirmar que la excepción se dispara y se traduce correctamente en el flujo end-to-end. La constitución exige unitaria+integración+funcional por escenario BDD (Principio II); aquí solo hay nivel unitario."
+    },
+    {
+      "id": "EDGE-perdida-conexion",
+      "fuente": "spec.md · Casos Borde (pérdida de conexión durante la carga; la fuente anterior debe permanecer intacta)",
+      "status": "incumple",
+      "evidencia": "CargarInformacionAcademicaServiceTest.dadoFalloConexionDuranteGuardadoCuandoSeCargaEntoncesExcepcionPropaga PASA, pero solo verifica que, con un repositorio MOCKEADO que lanza DataAccessResourceFailureException, la excepción se propaga sin ser absorbida. No existe ninguna prueba de integración que, contra una base de datos real (H2/Testcontainers), cargue primero una versión válida, luego fuerce un fallo en una segunda carga, y confirme por una consulta posterior (GET) que la fuente central anterior sigue disponible sin cambios — que es literalmente lo que exige el caso borde ('la fuente central anterior permanece intacta'). El código no tiene @Transactional explícito en CargarInformacionAcademicaService; funciona porque hay una única llamada a repositorio.save(), pero eso no está demostrado por una prueba, solo se infiere leyendo el código."
+    },
+    {
+      "id": "EDGE-periodo-no-existe",
+      "fuente": "spec.md · Casos Borde (se selecciona un período que no existe en el sistema; debe rechazarse la selección)",
+      "status": "cumple",
+      "evidencia": "CargarInformacionAcademicaServiceTest.dadoPeriodoInexistenteEntoncesLanzaExcepcion y ConsultarInformacionAcademicaServiceTest.dadoPeriodoInexistenteCuandoSeConsultaEntoncesLanzaExcepcion PASAN (PeriodoNoHabilitadoException). InformacionAcademicaControllerIT.dadoPeriodoInexistenteCuandoPostEntonces404 y dadoPeriodoInexistenteCuandoGetEntonces404 PASAN (HTTP 404) — cubierto en unitaria e integración."
+    }
+  ]
+}

@@ -56,6 +56,7 @@ class InformacionAcademicaControllerTest {
     void cargarPropagaErrorDeLectura() throws IOException {
         MultipartFile archivo = mock(MultipartFile.class);
         when(archivo.getContentType()).thenReturn("text/plain");
+        when(archivo.getOriginalFilename()).thenReturn("datos.csv");
         when(archivo.getBytes()).thenThrow(new IOException("lectura"));
 
         assertThatThrownBy(() -> controller.cargarInformacionAcademica("2025-II", "usuario", archivo))

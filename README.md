@@ -5,6 +5,7 @@ consultar la información académica centralizada por período, eliminando el tr
 archivos dispersos.
 
 ---
+specify init --here --force --ai claude --offline
 
 ## Tecnologías
 
@@ -311,6 +312,71 @@ Mismo ciclo TDD: pruebas unitarias, de integración y funcionales escritas antes
 ./gradlew test --tests "com.cienciayfe.secretaria.aplicacion.ConsultarInformacionAcademicaServiceTest"
 ./gradlew test
 ```
+
+---
+
+### Paso 7 — Informe final de calidad (Claude Quality Agent + Semgrep)
+
+La última verificación integral fue ejecutada el **5 de julio de 2026** sobre la versión
+`0.0.1-SNAPSHOT` y el commit `6bdf523`. El análisis combinó la suite automatizada, la
+verificación de cobertura con JaCoCo, el análisis estático de seguridad con Semgrep y la
+trazabilidad de los requisitos de la especificación.
+
+#### Resumen ejecutivo
+
+| Control de calidad | Resultado | Estado |
+|--------------------|-----------|--------|
+| Pruebas automatizadas | **49 de 49** aprobadas | Cumple |
+| Cobertura global de instrucciones | **99,1 %** | Cumple el umbral ≥ 80 % |
+| Cobertura de líneas | **99,4 %** (1 de 167 líneas no cubierta) | Cumple el umbral ≥ 80 % |
+| Cobertura de ramas | **84 %** (9 de 58 ramas no cubiertas) | Informativo |
+| Verificación JaCoCo | `BUILD SUCCESSFUL` | Cumple |
+| Semgrep | **0 hallazgos** en 21 archivos Java | Cumple |
+| Vulnerabilidades críticas/altas | **0 / 0** | Cumple |
+| Secretos en código de producción | **0** | Cumple |
+| Requisitos funcionales | **8 de 8** con evidencia de prueba | Cumple |
+| Casos borde evaluados | **3 de 3** con evidencia de prueba | Cumple |
+
+#### Alcance del análisis Semgrep
+
+El Claude Quality Agent ejecutó **Semgrep CLI 1.168.0** con configuración automática sobre
+`src/main/java`. Se aplicó un catálogo de **343 reglas** a los 21 archivos Java de producción:
+
+```bash
+uvx --from semgrep semgrep --config auto src/main/java --json
+```
+
+El resultado fue `Findings: 0 (0 blocking)`, sin errores de análisis. Como verificación
+complementaria se buscaron credenciales embebidas en `src/main`: las contraseñas encontradas
+en `application.yaml` son referencias a variables de entorno (`DB_PASSWORD` y
+`APP_SECRETARIA_PASSWORD`), no secretos en texto claro. La credencial presente en
+`src/test/resources/application-test.yml` corresponde exclusivamente al perfil de pruebas.
+
+La revisión manual confirmó además que los endpoints `/periodos/**` requieren el rol
+`SECRETARIA`, utilizan autenticación HTTP Basic y almacenan contraseñas con BCrypt.
+
+#### Trazabilidad y observaciones
+
+La evidencia automatizada cubre los requisitos RF-001 a RF-008 y los casos borde de archivo
+mayor a 10 MB, pérdida de conexión y período inexistente. No se identificaron incumplimientos
+bloqueantes. Permanecen dos oportunidades de mejora:
+
+1. JaCoCo genera actualmente el informe HTML, pero no el XML exigido por el Principio V de la
+   constitución. Se recomienda habilitar `xml.required = true` en `jacocoTestReport`.
+2. Las pruebas de integración autentican todas las solicitudes. Se recomienda añadir un caso
+   que invoque un endpoint protegido sin credenciales y compruebe explícitamente la respuesta
+   HTTP `401 Unauthorized`.
+
+**Conclusión:** la versión evaluada satisface los umbrales de pruebas, cobertura, seguridad
+estática y trazabilidad funcional definidos para la entrega. Las observaciones anteriores son
+no bloqueantes, pero deberían incorporarse al siguiente ciclo para completar la evidencia
+documental y reforzar la regresión del control de acceso.
+
+Artefactos de respaldo:
+
+- [Informe visual de calidad](quality-output/report.html)
+- [Evidencia estructurada de verificación](quality-output/verification.json)
+- [Resultado crudo de Semgrep](quality-output/semgrep-result.json)
 
 ---
 
